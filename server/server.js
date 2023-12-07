@@ -4,29 +4,23 @@ const socketIO = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIO(server);
-
-const userSocketMap = new Map(); // Maps user IDs to sockets
+const io = socketIO(server, {
+  cors: {
+    origin: "*",  // For testing purposes, this is set to allow any origin
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
 
 io.on('connection', (socket) => {
-    console.log('A user connected');
+    console.log('A user connected with socket ID:', socket.id);
 
-    socket.on('register', (userId) => {
-        userSocketMap.set(userId, socket.id);
-    });
-
-    socket.on('private message', ({ content, to }) => {
-        const targetSocketId = userSocketMap.get(to);
-        if (targetSocketId) {
-            io.to(targetSocketId).emit('private message', {
-                content,
-                from: Array.from(userSocketMap.keys()).find(key => userSocketMap.get(key) === socket.id),
-            });
-        }
+    socket.on('chat message', (msg) => {
+        // Broadcast message to all connected clients
+        io.emit('chat message', msg);
     });
 
     socket.on('disconnect', () => {
-        userSocketMap.delete(Array.from(userSocketMap.keys()).find(key => userSocketMap.get(key) === socket.id));
         console.log('User disconnected');
     });
 });
